@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*- 
 
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -38,6 +39,7 @@ import time
 import itertools
 import shutil
 import sys
+import numpy
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -46,6 +48,57 @@ ch.setLevel(logging.DEBUG)
 logger.addHandler(ch)
 
 cudaminer = "cudaminer"
+
+# default param_dict creation functions
+def __launch_config_values__():
+    ret_value = []
+    itertools_list = itertools.product(
+        ["L", "F", ], # <ref>http://www.reddit.com/r/litecoinmining/comments/1t65as/nvidia_kepler_mining_improvements_now_in/</ref>
+        [str(i) for i in range(1, 32)], 
+        [str(i) for i in range(1, 16)], 
+            # L1x17 fails with `cudaminer --benchmark --no-autotune 
+            # --hash-parallel 0 --algo scrypt:1 --texture-cache 0 
+            # --launch-config L1x17 --single-memory 0
+    )
+    for itertools_item in itertools_list:
+        ret_value.append("%s%sx%s" % (itertools_item[0], itertools_item[1], itertools_item[2]))
+    itertools_list = itertools.product(
+        ["S", "K", "T", "X"], # <ref>http://www.reddit.com/r/litecoinmining/comments/1t65as/nvidia_kepler_mining_improvements_now_in/</ref>
+        [str(i) for i in range(1, 32)], 
+        [str(i) for i in range(1, 32)], 
+    )
+    for itertools_item in itertools_list:
+        ret_value.append("%s%sx%s" % (itertools_item[0], itertools_item[1], itertools_item[2]))
+    return ret_value
+def __scrypt_values__():
+    # needs to cover at least scrypt Salsa20/8(1024,1,1), see comment below
+    ret_value = ["scrypt:%s" % (str(pow(2, i)),) for i in range(0, 10)]
+    return ret_value
+def __scrypt_nfactor_values__():
+    ret_value = ["scrypt-jane:%s" % (str(pow(2, i)),) for i in range(0, 10)]
+    return ret_value
+def __scrypt_starttime_values__():
+    itertools_list = itertools.product(
+        [str(i) for i in range(1, 32)], # StartTime
+        [str(i) for i in range(1, 32)], # Nfmin
+        [str(i) for i in range(1, 32)], # Nfmax
+    )
+    ret_value = []
+    for itertools_item in itertools_list:
+        ret_value.append("scrypt-jane:%s,%s,%s" % (itertools_item[0], itertools_item[1], itertools_item[2]))
+    return ret_value
+
+param_dict_default = {
+    "--hash-parallel": ["0", "1", "2"], # -H
+    "--single-memory": ["0", "1"], # @TODO: check # -m
+    "--texture-cache": ["0", "1"], # - " - # -C
+    "--launch-config": __launch_config_values__(), # -l
+    #"--batchsize": [str(pow(2,i)) for i in range(0,10)], # causes `unrecognized option '--batchsize'`, deactivate temporarily, until clear what `comma separated list of max. scrypt iterations` (from `cudaminer --help`) means # -b
+    "--algo": __scrypt_values__()+["scrypt-jane", ]+__scrypt_nfactor_values__()+__scrypt_starttime_values__()+["sha256d", "keccak", "blake", ], 
+          # -a
+          # `scrypt` can be ommitted because it means `scrypt Salsa20/8(1024,1,1)` which is covered by `scrypt:N` which means `scrypt Salsa 20/8(N,1,1)`
+          # unclear what `scrypt-jane:Coin` with `Coin must be one of the supported coins.` (see `cudaminer --help`) means, skipping
+}
 
 # invokes `cudaminer` with all combinations of the values in the `param_dict`. 
 # The combinations are produced by creating the cartesion product of tuples of 
@@ -65,7 +118,9 @@ cudaminer = "cudaminer"
 # @args output_scan_max_count determines how many times `output_scan_interval` 
 # can elapse until the invokation of `cudaminer` is considered as failed and 
 # the test run is aborted and skipped
-def cudaminer_param_checker(param_dict, cudaminer=cudaminer, cudaminer_additional_parameters=[], output_scan_interval=1, output_scan_max_count = 120):
+# @args hash_rate_count the number of hash/s rate values which ought to be 
+# retrieved from output before the `cudaminer` process is killed
+def cudaminer_param_checker(param_dict=param_dict_default, cudaminer=cudaminer, cudaminer_additional_parameters=[], output_scan_interval=1, output_scan_max_count = 120, hash_rate_count=8):
     # don't validate existance and accessibility of cudaminer, see internal 
     # implementation notes below
     if str(type(cudaminer_additional_parameters)) != "<type 'list'>":
@@ -109,7 +164,7 @@ def cudaminer_param_checker(param_dict, cudaminer=cudaminer, cudaminer_additiona
             cudaminer_process_output = ""
             output_scan_count = 0
             logger.debug("waiting for cudaminer output containing a hash/s value")
-            while not "hash/s" in cudaminer_process_output:
+            while cudaminer_process_output.count("hash/s") < hash_rate_count:
                 time.sleep(output_scan_interval)
                 cudaminer_process_output += str(cudaminer_process.stderr.read(100)) # str conversion necessary in python3
                     # cudaminer produces endless output once it is running and EOF 
@@ -124,28 +179,33 @@ def cudaminer_param_checker(param_dict, cudaminer=cudaminer, cudaminer_additiona
                     cudaminer_process_output += cudaminer_process.stderr.read() 
                         # read the rest (`read` return immediately when process 
                         # is terminated)
-                    logger.warn("cudaminer returned unexpectedly with returncode '%s', consider adjusting param_dict, skipping (output so far has been '%s')" % (str(cudaminer _process_returncode), cudaminer_process_output))
+                    logger.warn("cudaminer returned unexpectedly with returncode '%s', consider adjusting param_dict, skipping (output so far has been '%s')" % (str(cudaminer_process_returncode), cudaminer_process_output))
                     return
                 if output_scan_count > output_scan_max_count:
                     logger.info("waited longer than '%ss' for cudaminer output, aborting test running and skipping (output so far has been '%s')" % (str(output_scan_count*output_scan_interval), cudaminer_process_output))
                     continue
             cudaminer_process.terminate()
-            # retrieve the last hash/s value
-            cudaminer_process_output_split = cudaminer_process_output.split("hash/s")[-2] # in case the string ends with the split term `''` is added to the split result (which is very smart :))
-            cudaminer_process_output_split_split = cudaminer_process_output_split.split(" ")
-            hash_rate_suffix = cudaminer_process_output_split_split[-1] # 'k' or 'm' (theoretically others)
-            hash_rate = float(cudaminer_process_output_split_split[-2])
-            logger.debug("result is '%s %s'" % (str(hash_rate), cudaminer_process_output_split[-1].strip()))
+            # retrieve the hash/s value
+            cudaminer_process_output_splits = cudaminer_process_output.split("hash/s") # in case the string ends with the split term `''` is added to the split result (which is very smart :))
+            hash_rates = []
+            for cudaminer_process_output_split in cudaminer_process_output_splits[:-1]: # last item can always be skipped, see above
+                cudaminer_process_output_split_split = cudaminer_process_output_split.split(" ")
+                hash_rate_suffix = cudaminer_process_output_split_split[-1] # 'k' or 'm' (theoretically others)
+                hash_rate = float(cudaminer_process_output_split_split[-2])
+                hash_rates.append((hash_rate, hash_rate_suffix))
+            logger.debug("results are '%s'" % (str(["%s %s" % (i[0], i[1]) for i in hash_rates])))
             
-            # store results for sorted summary
-            result_dict[hash_rate] = cmd
+            # store results for sorted summary (store mean as key for 
+            # sorting and keep values in dict value as part of a tuple)
+            hash_rate_mean = numpy.mean([i[0] for i in hash_rates])
+            result_dict[hash_rate_mean] = (["%s %s" % (i[0], i[1]) for i in hash_rates], cmd)
         __outer_loop__()
         
         # summary
         logger.info("results (ascending):")
-        logger.info("hash-rate\tcommand line")
+        logger.info("hash/s rate mean\thash/s rates\tcommand line")
         for hash_rate in sorted(result_dict):
-            logger.info("%s\t%s" % (str(hash_rate), result_dict[hash_rate]))
+            logger.info("%s\t%s\t%s" % (str(hash_rate), str(result_dict[hash_rate][0]), str(result_dict[hash_rate][1])))
 # internal implementation notes:
 # - cross-platform validation of existance and accessibility of the `cudaminer` 
 # parameter can only be done with `python3`'s `shutil.which`. Using `python3` 
