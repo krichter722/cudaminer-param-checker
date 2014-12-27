@@ -3,7 +3,7 @@
 ## Test parameters
 I'm testing the script on a `Lenovo IdeaPad Z-500` with an `NVIDIA GeForce GT740M`. I'll publish my programming result before seriously researching what test parameters acutally mean (there're most certainly several combinations which don't make sense and can be skipped). My experience of up to 800 % of the hash rate I acchieved with specific parameter recommendations speak for themselves. Some value intervals in the test which serve for combinations generation are made up without basic understanding of upper and lower bounds, i.e. some (possibly optimal) value combinations might not be covered by the test.
 
-If you're an expert you might want to use the tool to "visualize" - the visualization is currently so poor that it can be considered inexistent; I phantasized about tables and graphs, we'll see what that brings - impact of a parameter or a combinations in a certain range
+If you're an expert you might want to use the tool to investigate impact of a parameter or combinations in a certain range.
 
 ## Internals
 The script uses the python `itertools` package which allows quite efficient memory usage, therefore an almost arbitrary large set of parameters won't cause a crash of the application or worse your system due to missing memory - but the time it takes to run all the tests can easily go up to weeks and months.
