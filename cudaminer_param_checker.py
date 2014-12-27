@@ -41,6 +41,7 @@ import shutil
 import sys
 import numpy
 import texttable
+import progressbar
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -148,6 +149,8 @@ def cudaminer_param_checker(param_dict=param_dict_default, cudaminer=cudaminer, 
         param_count += len(param_dict[param])
     logger.info("testing with '%s' parameter combinations" % (str(param_count)))
     result_dict = dict()
+    pbar = progressbar.ProgressBar(maxval=param_count).start()
+    pbar_progress = 0
     for param_dict_cartesian_item in param_dict_cartesian:
         # breakable nested loops need to be imitated with functions
         def __outer_loop__():
@@ -201,16 +204,19 @@ def cudaminer_param_checker(param_dict=param_dict_default, cudaminer=cudaminer, 
             hash_rate_mean = numpy.mean([i[0] for i in hash_rates])
             result_dict[hash_rate_mean] = (["%s %s" % (i[0], i[1]) for i in hash_rates], cmd)
         __outer_loop__()
+        pbar_progress += 1
+        pbar.update(pbar_progress)
+    pbar.finish()
         
     # summary
     logger.info("results (ascending):")
-    summery_table = texttable.Texttable()
-    summery_table.set_cols_align(["l", "l", "l"])
-    summery_table.set_cols_valign(["t", "t", "t"])
-    summery_table.add_rows([["hash/s rate mean", "hash/s rates", "command line"]], header=True)
+    summary_table = texttable.Texttable()
+    summary_table.set_cols_align(["l", "l", "l"])
+    summary_table.set_cols_valign(["t", "t", "t"])
+    summary_table.add_rows([["hash/s rate mean", "hash/s rates", "command line"]], header=True)
     for hash_rate in sorted(result_dict):
-        summery_table.add_row([hash_rate, str(result_dict[hash_rate][0]), str(result_dict[hash_rate][1])])
-    logger.info(summery_table.draw())
+        summary_table.add_row([hash_rate, str(result_dict[hash_rate][0]), str(result_dict[hash_rate][1])])
+    logger.info(summary_table.draw())
 # internal implementation notes:
 # - cross-platform validation of existance and accessibility of the `cudaminer` 
 # parameter can only be done with `python3`'s `shutil.which`. Using `python3` 

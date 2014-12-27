@@ -26,3 +26,10 @@ some commands, e.g. on Ubuntu 14.10 amd64 I need to run
 
 after installing the `nvidia` and removing the `nouveau` driver and installing the NVIDIA CUDA toolkit according to http://docs.nvidia.com/cuda/cuda-getting-started-guide-for-linux/index.html (not the hints in the instructions regarding i386 systems).
 
+## Prerequisites
+Install the `pip` package manager and run
+
+    sudo pip install numpy
+    sudo pip install texttable
+    sudo pip install progressbar
+
