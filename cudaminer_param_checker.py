@@ -40,11 +40,12 @@ import itertools
 import shutil
 import sys
 import numpy
+import texttable
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.INFO)
 logger.addHandler(ch)
 
 cudaminer = "cudaminer"
@@ -201,11 +202,15 @@ def cudaminer_param_checker(param_dict=param_dict_default, cudaminer=cudaminer, 
             result_dict[hash_rate_mean] = (["%s %s" % (i[0], i[1]) for i in hash_rates], cmd)
         __outer_loop__()
         
-        # summary
-        logger.info("results (ascending):")
-        logger.info("hash/s rate mean\thash/s rates\tcommand line")
-        for hash_rate in sorted(result_dict):
-            logger.info("%s\t%s\t%s" % (str(hash_rate), str(result_dict[hash_rate][0]), str(result_dict[hash_rate][1])))
+    # summary
+    logger.info("results (ascending):")
+    summery_table = texttable.Texttable()
+    summery_table.set_cols_align(["l", "l", "l"])
+    summery_table.set_cols_valign(["t", "t", "t"])
+    summery_table.add_rows([["hash/s rate mean", "hash/s rates", "command line"]], header=True)
+    for hash_rate in sorted(result_dict):
+        summery_table.add_row([hash_rate, str(result_dict[hash_rate][0]), str(result_dict[hash_rate][1])])
+    logger.info(summery_table.draw())
 # internal implementation notes:
 # - cross-platform validation of existance and accessibility of the `cudaminer` 
 # parameter can only be done with `python3`'s `shutil.which`. Using `python3` 
