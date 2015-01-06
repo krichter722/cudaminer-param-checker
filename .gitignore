@@ -1,1 +1,4 @@
 *.pyc
+cudaminer_param_checker.egg-info/
+build/
+dist/
