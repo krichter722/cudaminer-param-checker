@@ -709,14 +709,18 @@ Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>."""
     output_scan_interval=(__output_scan_interval_docstring__, 'positional', None, int, ), 
     output_scan_max_count=(__output_scan_max_count_docstring__, 'positional', None, int),
     hash_rate_count=(__hash_rate_count_docstring__, 'positional', None, int, ), 
-    debug=("Turn on debugging output", "flag")
+    debug=("Turn on debugging output", "flag"), 
+    version=("Print information about the version of the software to stdout and exit", "flag"), 
 )
-def cudaminer_param_checker(frontend=frontend_default, cudaminer=cudaminer_default, output_scan_interval=output_scan_interval_default, output_scan_max_count=output_scan_max_count_default, hash_rate_count=hash_rate_count_default, debug=debug_default):
+def cudaminer_param_checker(frontend=frontend_default, cudaminer=cudaminer_default, output_scan_interval=output_scan_interval_default, output_scan_max_count=output_scan_max_count_default, hash_rate_count=hash_rate_count_default, debug=debug_default, version=False):
     """
     @args cudaminer %(__cudaminer_docstring__)s
     @args output_scan_interval %(__output_scan_interval_docstring__)s
     @args output_scan_max_count %(__output_scan_max_count_docstring__)s
     @args hash_rate_count %(__hash_rate_count_docstring__)s""" % {"__cudaminer_docstring__": __cudaminer_docstring__, "__output_scan_interval_docstring__": __output_scan_interval_docstring__, "__output_scan_interval_docstring__": __output_scan_interval_docstring__, "__output_scan_max_count_docstring__": __output_scan_max_count_docstring__, "__hash_rate_count_docstring__": __hash_rate_count_docstring__}
+    if version:
+        print(cudaminer_param_checker_globals.app_version_string)
+        return
     if debug == True:
         logger.setLevel(logging.DEBUG)
         ch.setLevel(logging.DEBUG)
