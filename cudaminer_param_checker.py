@@ -204,10 +204,10 @@ class CudaminerParamCheckerGenerator():
         self.generationRunning = True
     
     def stop(self):
+        """does not close the internal `shelve` dictionary in order to allow handling stop of value generation only"""
         self.generationRunning = False
         if not self.cudaminerProcess is None:
             self.cudaminerProcess.terminate()
-        self.result_dict.close()
     
     def isRunning(self):
         return self.generationRunning
@@ -547,6 +547,7 @@ class CudaminerParamChecker(wx.Frame):
             # path
         filePath = str(fileDialogWidgetPath)
         self.__clear__(storage_file_path=filePath) # creates a new generator instance
+        print(self.generator.getResultDict())
         self.__summary_grid_update__(self.generator.getResultDict())
         logger.info("resuming with '%d' entries from file '%s'" % (len(self.generator.getResultDict()), filePath))
         wx.CallAfter(self.gaugeProgressText.SetLabel, "Generated %d/%d values" % (self.generator.getProgressCurrent(), self.generator.getProgressMax()))
@@ -669,10 +670,12 @@ Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>."""
     def onCancel(self, event):
         self.generator.stop()
         self.__handle_controls_generation_stopped__()
+        self.generator.getResultDict().close()
     
     def onCancelSave(self, event):
         self.generator.stop()
         self.saveIntermediateResult()
+        self.generator.getResultDict().close()
         self.__handle_controls_generation_stopped__()
 
     def onCloseWindow(self, event):
@@ -681,6 +684,7 @@ Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>."""
             generationThread.join() # avoid PyDeadObjectError which seems to 
                 # occur after `Destroy` has been called. This cause long 
                 # shutdown (up to 90 seconds depending on cudaminer) -> it's more elegant to expose the cudaminer process and kill it immediately because there's no sense in awaiting its return when the application ought to be closed
+        self.generator.getResultDict().close()
         self.Destroy()
     
     def saveIntermediateResult(self):
