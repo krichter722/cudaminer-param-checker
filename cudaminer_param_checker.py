@@ -513,7 +513,10 @@ class CudaminerParamChecker(wx.Frame):
         self.numberOfCandidates = self.numberOfCandidatesSpinCtrl.GetValue()
     
     def __clear__(self, storage_file_path=__storage_file_path_default__()):
-        self.summaryGrid.ClearGrid()
+        self.summaryGrid.ClearGrid() # empties the cells only
+        if self.summaryGrid.GetTable().GetRowsCount() > 0:
+            self.summaryGrid.DeleteRows(numRows=self.summaryGrid.GetTable().GetRowsCount()) # wx.grid.Grid.DeleteRows seems to be the only function to delete/remove rows
+        self.resultDictKeysSortedLast = set()
         self.generator = CudaminerParamCheckerGenerator(storage_file_path=storage_file_path)
     
     def onClear(self, event):
@@ -547,7 +550,6 @@ class CudaminerParamChecker(wx.Frame):
             # path
         filePath = str(fileDialogWidgetPath)
         self.__clear__(storage_file_path=filePath) # creates a new generator instance
-        print(self.generator.getResultDict())
         self.__summary_grid_update__(self.generator.getResultDict())
         logger.info("resuming with '%d' entries from file '%s'" % (len(self.generator.getResultDict()), filePath))
         wx.CallAfter(self.gaugeProgressText.SetLabel, "Generated %d/%d values" % (self.generator.getProgressCurrent(), self.generator.getProgressMax()))
@@ -648,7 +650,7 @@ Programm erhalten haben. Wenn nicht, siehe <http://www.gnu.org/licenses/>."""
     def onStart(self, event):
         wx.CallAfter(self.gaugeProgressText.SetLabel, "Generated 0/%d values" % (self.generator.getProgressMax(), )) # avoid that the old value is still displayed between clicking start and the first update (when resuming this will be overwritten immediately with and update)
         self.__start__()
-    
+
     def __summary_grid_update__(self, resultDict):
         """in order to update the table as efficient as possible, the new `resultDictKeysSorted` is compared to `self.resultDictKeysSortedLast` and the difference (always one item) inserted into the table. Calculating the intersetion of `set`s and sorting of already sorted collections is very efficient
         @TODO: research how efficiently `wx.Grid` updates its view (e.g. whether it skips updates which are not in the viewport)"""
