@@ -37,9 +37,9 @@ setup(
     install_requires = ["plac >= 0.9.1", "numpy", "texttable", "progressbar", "python-essentials", ], 
     
     # metadata for upload to PyPI
-    author = "Karl-Philipp Richter",
-    author_email = "krichter722@aol.de",
-    url='https://github.com/krichter722/cudaminer-param-checker',
+    author = cudaminer_param_checker_globals.app_author,
+    author_email = cudaminer_param_checker_globals.app_author_email,
+    url=cudaminer_param_checker_globals.app_website,
     description = "An application to check a large set of parameters which can be passed to `cudaminer` in order to figure out the optimal combination with console and application GUI frontend",
     license = "GPLv3",
     keywords = "cudaminer bitcoin bitcoin-mining",

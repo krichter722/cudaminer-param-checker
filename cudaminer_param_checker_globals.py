@@ -32,5 +32,6 @@ app_version = (1, 0)
 app_version_string = str.join(".", [str(x) for x in app_version])
 app_copyright_year = 2014
 app_author = "Karl-Philipp Richter"
+app_author_email = "krichter722@aol.de"
 app_website = "https://github.com/krichter722/cudaminer-param-checker"
 
